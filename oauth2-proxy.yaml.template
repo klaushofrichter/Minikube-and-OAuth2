@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    oauth2-app: oauth2-proxy
+  name: oauth2-deploy
+  namespace: ${NAMESPACE}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      oauth2-app: oauth2-proxy
+  template:
+    metadata:
+      labels:
+        oauth2-app: oauth2-proxy
+    spec:
+      containers:
+      - args:
+        - --provider=github
+        - --email-domain=*
+        - --upstream=file:///dev/null
+        - --http-address=0.0.0.0:4180
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          value: ${OAUTH2_PROXY_CLIENT_ID}
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          value: ${OAUTH2_PROXY_CLIENT_SECRET}
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          value: ${OAUTH2_PROXY_COOKIE_SECRET}
+        image: quay.io/oauth2-proxy/oauth2-proxy:latest
+        imagePullPolicy: Always
+        name: oauth2-container
+        ports:
+        - containerPort: 4180
+          protocol: TCP
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    oauth2-app: oauth2-proxy
+  name: oauth2-service
+  namespace: ${NAMESPACE}
+spec:
+  ports:
+  - name: http
+    port: 4180
+    protocol: TCP
+    targetPort: 4180
+  selector:
+    oauth2-app: oauth2-proxy
+    
+--- 
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-ingress
+  namespace: ${NAMESPACE}
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ${PUBLICURL}
+    secretName: ${NAMESPACE}-tls
+  rules:
+  - host: ${PUBLICURL}
+    http:
+      paths:
+        - path: /oauth2
+          pathType: Prefix
+          backend:
+            service:
+              name: oauth2-service
+              port:
+                number: 4180

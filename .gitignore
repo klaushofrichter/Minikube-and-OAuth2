@@ -1,0 +1,4 @@
+kubectl.config
+*-cert.yaml
+my-config.sh
+config.sh

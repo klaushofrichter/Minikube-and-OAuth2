@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+  namespace: ${NAMESPACE}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/auth-url: "https://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "https://$host/oauth2/start?rd=$escaped_request_uri"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - ${PUBLICURL}
+    secretName: ${NAMESPACE}-tls
+  rules:
+  - host: ${PUBLICURL}
+    http:
+      paths:
+        - path: /hello
+          pathType: Prefix
+          backend:
+            service:
+              name: hello-service
+              port: 
+                number: 5678
+        - path: /welcome
+          pathType: Prefix
+          backend:
+            service:
+              name: welcome-service
+              port: 
+                number: 5678
+
